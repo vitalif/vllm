@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 from vllm.logger import init_logger
 from vllm.utils.math_utils import round_up
-from vllm.distributed.utils import get_pp_indices
 
 if TYPE_CHECKING:
     from transformers import PretrainedConfig
@@ -875,18 +874,6 @@ class Qwen4ExpForConditionalGenerationConfig(Qwen3_5ForConditionalGenerationConf
             raise NotImplementedError(
                 "Qwen4Exp PLE/QSA does not support dual-batch overlap or microbatching"
             )
-        # Checked again in Qwen4ExpModelState; rejecting it here keeps the
-        # engine from loading weights first.
-        if text_config.ple_layer_ids and parallel_config.pipeline_parallel_size > 1:
-            start, end = get_pp_indices(
-                text_config.num_hidden_layers, 0, parallel_config.pipeline_parallel_size
-            )
-            if not all(start <= int(i) < end for i in text_config.ple_layer_ids):
-                raise NotImplementedError(
-                    "Qwen4Exp N-gram PLE embedding requires pipeline_parallel_size=1 "
-                    "because non-first pipeline ranks do not receive the raw input_ids "
-                    "it needs. Please run with PP=1."
-                )
         multimodal_config = vllm_config.model_config.multimodal_config
         if multimodal_config is not None and multimodal_config.language_model_only:
             _strip_qwen4_exp_mrope(vllm_config.model_config)
