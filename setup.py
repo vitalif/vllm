@@ -201,6 +201,7 @@ class cmake_build_ext(build_ext):
     def compute_num_jobs(self):
         # `num_jobs` is either the value of the MAX_JOBS environment variable
         # (if defined) or the number of CPUs available.
+        return 16, 2
         num_jobs = envs.MAX_JOBS
         if num_jobs is not None:
             num_jobs = int(num_jobs)

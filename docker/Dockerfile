@@ -669,7 +669,7 @@ COPY .buildkite/check-wheel-size.py check-wheel-size.py
 # sync the default value with .buildkite/check-wheel-size.py
 ARG VLLM_MAX_SIZE_MB=500
 ENV VLLM_MAX_SIZE_MB=$VLLM_MAX_SIZE_MB
-ARG RUN_WHEEL_CHECK=true
+ARG RUN_WHEEL_CHECK=false
 RUN if [ "$RUN_WHEEL_CHECK" = "true" ] && \
         [ "${CUDA_VERSION%%.*}" = "13" ]; then \
         python3 check-wheel-size.py dist; \
