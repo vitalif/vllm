@@ -12,6 +12,7 @@ from vllm.v1.worker.gpu.input_batch import InputBatch
 from vllm.v1.worker.gpu.mm.encoder_cache import EncoderCache
 from vllm.v1.worker.gpu.model_states.mamba_hybrid import MambaHybridModelState
 from vllm.v1.worker.gpu.states import RequestState
+from vllm.distributed.utils import get_pp_indices
 
 
 class Qwen4ExpModelState(MambaHybridModelState):
@@ -33,12 +34,16 @@ class Qwen4ExpModelState(MambaHybridModelState):
             return
 
         if vllm_config.parallel_config.pipeline_parallel_size > 1:
-            raise RuntimeError(
-                "N-gram PLE embedding currently requires "
-                "pipeline_parallel_size=1 because non-first pipeline ranks do "
-                "not receive the raw input_ids required by PLE. Please run "
-                "with PP=1."
+            start, end = get_pp_indices(
+                config.num_hidden_layers, 0, vllm_config.parallel_config.pipeline_parallel_size
             )
+            if not all(start <= int(i) < end for i in config.ple_layer_ids):
+                raise RuntimeError(
+                    "N-gram PLE embedding currently requires "
+                    "pipeline_parallel_size=1 because non-first pipeline ranks do "
+                    "not receive the raw input_ids required by PLE. Please run "
+                    "with PP=1."
+                )
 
         self.ngram_context_len = int(config.ngram_size) - 1
         if self.ngram_context_len <= 0:
