@@ -100,6 +100,7 @@ class Qwen4ExpPLELayer(nn.Module, MambaBase):
             vllm_config.scheduler_config.max_num_batched_tokens,
             data_parallel_rank=vllm_config.parallel_config.data_parallel_rank,
             prefix=f"{prefix}.ple_embedding",
+            layer_name=prefix,
             quant_config=quant_config,
             params_dtype=model_config.dtype,
         )
@@ -394,10 +395,16 @@ class Qwen4ExpPLELayer(nn.Module, MambaBase):
     def forward(
         self,
         hidden_states: torch.Tensor,
-        input_ids: torch.Tensor,
-        query_start_loc: torch.Tensor,
-        ngram_context: torch.Tensor,
+        input_ids: torch.Tensor | None,
+        query_start_loc: torch.Tensor | None,
+        ngram_context: torch.Tensor | None,
     ) -> torch.Tensor:
+        # The reshape just below needs input_ids regardless of mmap staging
+        # or not, so this check cannot be deferred into ple_embedding like
+        # the query_start_loc/ngram_context checks are (those are only
+        # needed by the non-staged hashing branch).
+        if input_ids is None:
+            raise RuntimeError("PLE inputs were not prepared")
         input_ids = input_ids.reshape(-1)
         if input_ids.shape[0] != hidden_states.shape[0]:
             raise ValueError(
